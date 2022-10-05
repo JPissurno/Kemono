@@ -21,9 +21,6 @@ _config = KemonoConfig.KemonoConfig()
 
 def main():
 
-    for k, v in _config.__dict__.items():
-        print(k, '=', v)
-    return
     options = Options()
     # options.add_argument('--headless')
     options.page_load_strategy = 'eager'

@@ -1,4 +1,3 @@
-from calendar import c
 import os
 import os.path
 import argparse
@@ -62,13 +61,13 @@ class KemonoConfig():
         argparser.add_argument('-i', '--ignore-first-image', action='store_true',
                                help='ignores the first image in a post')
 
-        argparser.add_argument('--img-max-size', type=positive_parser, metavar=unit,
+        argparser.add_argument('--image-max-size', type=positive_parser, metavar=unit,
                                help='max size limit for images, in kilo bytes (default: any)')
 
         argparser.add_argument('--video-max-size', type=positive_parser, metavar=unit,
                                help='max size limit for videos, in kilo bytes (default: any)')
 
-        argparser.add_argument('--other-file-max-size', type=positive_parser, metavar=unit,
+        argparser.add_argument('--otherfile-max-size', type=positive_parser, metavar=unit,
                                help='max size limit for files that are not image nor video, in kilo bytes (default: any)')
 
         argparser.add_argument('-w', '--extensions-whitelist', nargs='+', metavar=('extension1', 'extension2'),
@@ -116,7 +115,8 @@ class KemonoConfig():
             try:
                 with open(KemonoConfig.config_file, 'w') as cf:
                     for argument, value in default_values.items():
-                        cparser.set('DEFAULT', argument, value)
+                        cparser.set('DEFAULT', argument, str(value)
+                                    if type(value) != list else '')
                     cparser.write(cf, space_around_delimiters=False)
 
             except OSError:
@@ -132,6 +132,7 @@ class KemonoConfig():
         # Loads config file options into KemonoConfig instance
         cparser = configparser.ConfigParser()
         default_values = self.get_default_values()
+
         try:
             with open(self.config_file) as cf:
                 content = cf.read()
@@ -152,12 +153,15 @@ class KemonoConfig():
                         continue
 
                     setattr(self, option, value if opt_type != list else [
-                            string for string in value.split(',')])
+                            string for string in value.split(',') if string != ''])
 
         except OSError:
             raise OSError
 
+        if override is None:
+            return
+
         # Overrides options with in-line arguments
-        if override is not None:
-            for argument, value in override.items():
+        for argument, value in override.items():
+            if value != None and value != '':
                 setattr(self, argument, value)
