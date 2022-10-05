@@ -28,41 +28,10 @@ class KemonoConfig():
     extensions_whitelist = []
     extensions_blacklist = []
 
-    """
-    >>> class A():
-    ...     a = 12
-    ...     b = 13
-    ...     def __init__(self):
-    ...             self.a = 0
-    ...             self.b = 1
-    ...     def printa(self):
-    ...             for att, value in self.__dict__.items():
-    ...                     print(att, '=', value)
-    ...     def printb(self):
-    ...             for att in A.__dict__.keys():
-    ...                     if att[:2] != '__':
-    ...                             value = getattr(A, att)
-    ...                             if not callable(value):
-    ...                                     print(att, '=', value)
-    ...
-    >>> a = A()
-    >>> a.printa()
-    a = 0
-    b = 1
-    >>> a.printb()
-    a = 12
-    b = 13
-    """
-
     def __init__(self):
 
-        arguments = self.get_arguments()
-
-        for argument, value in arguments.items():
-            setattr(self, argument, value)
-
         try:
-            self.parse_configfile(override=arguments)
+            self.parse_configfile(override=self.get_arguments())
         except OSError:
             raise OSError
 
@@ -133,31 +102,36 @@ class KemonoConfig():
 
         return default_values
 
-    def create_default_configfile(self):
-
-        cparser = configparser.ConfigParser()
-        default_values = self.get_default_values()
-        with open(KemonoConfig.config_file, 'w') as cf:
-            for argument, value in default_values.items():
-                cparser.set('DEFAULT', argument, value)
-            cparser.write(cf, space_around_delimiters=False)
-
-    def parse_configfile(self, override=None):
-
-        default_values = self.get_default_values()
+    def check_configfile(self, cfile):
 
         # Checks for provided config file.
         # Creates default config file if necessary
-        if not os.path.exists(self.config_file):
-            if self.config_file != KemonoConfig.config_file:
+        if not os.path.exists(cfile):
+            if cfile != KemonoConfig.config_file:
                 raise OSError
+
+            cparser = configparser.ConfigParser()
+            default_values = self.get_default_values()
+
             try:
-                self.create_default_configfile()
+                with open(KemonoConfig.config_file, 'w') as cf:
+                    for argument, value in default_values.items():
+                        cparser.set('DEFAULT', argument, value)
+                    cparser.write(cf, space_around_delimiters=False)
+
             except OSError:
                 raise OSError
 
+    def parse_configfile(self, override=None):
+
+        try:
+            self.check_configfile(self.config_file)
+        except OSError:
+            raise OSError
+
         # Loads config file options into KemonoConfig instance
         cparser = configparser.ConfigParser()
+        default_values = self.get_default_values()
         try:
             with open(self.config_file) as cf:
                 content = cf.read()
@@ -174,13 +148,11 @@ class KemonoConfig():
 
                     try:
                         value = getoption('DEFAULT', option)
-                        if opt_type == list:
-                            for string in value.split(','):
-
-                        elif:
-
                     except configparser.NoOptionError:
                         continue
+
+                    setattr(self, option, value if opt_type != list else [
+                            string for string in value.split(',')])
 
         except OSError:
             raise OSError
@@ -188,7 +160,4 @@ class KemonoConfig():
         # Overrides options with in-line arguments
         if override is not None:
             for argument, value in override.items():
-                try:
-                    self.__dict__[argument] = value
-                except KeyError:
-                    setattr(self, argument, value)
+                setattr(self, argument, value)

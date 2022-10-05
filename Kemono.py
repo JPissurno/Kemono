@@ -1,10 +1,8 @@
 import os
 import os.path
 import shutil
-import argparse
 import requests
 import itertools
-import configparser
 from time import sleep
 from selenium import webdriver
 from difflib import SequenceMatcher
@@ -15,7 +13,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.chrome.service import Service as ChromeService
 
 import KemonoConfig
-import KemonoSpider
+# import KemonoSpider
 import KemonoConstants
 
 _config = KemonoConfig.KemonoConfig()
@@ -23,8 +21,9 @@ _config = KemonoConfig.KemonoConfig()
 
 def main():
 
-    args['path'] = os.path.abspath(args['path'])
-
+    for k, v in _config.__dict__.items():
+        print(k, '=', v)
+    return
     options = Options()
     # options.add_argument('--headless')
     options.page_load_strategy = 'eager'
@@ -33,10 +32,10 @@ def main():
         executable_path=ChromeDriverManager().install()), options=options)
     driver.get(KemonoConstants.BASE_URL_ARTIST)
 
-    if args['find_more_handles'] == True:
-        args['handles'].append(get_more_handles(driver, args['handles']))
+    if _config.find_more_handles == True:
+        _config.handles.append(get_more_handles(driver, _config.handles))
 
-    artist_links = get_artist_links(driver, args['handles'])
+    artist_links = get_artist_links(driver, _config.handles)
 
     for link in artist_links:
         download_artist(driver, link)
@@ -71,8 +70,8 @@ def get_artist_links(webpage, handles):
     for handle in handles:
 
         if handle.isnumeric():
-            if requests.get(BASE_URL+'/fanbox/user/'+handle).status_code < 300:
-                links.append(BASE_URL+'/fanbox/user/'+handle)
+            if requests.get(KemonoConstants.BASE_URL+'/fanbox/user/'+handle).status_code < 300:
+                links.append(KemonoConstants.BASE_URL+'/fanbox/user/'+handle)
             continue
 
         textbox.send_keys(handle)
@@ -84,7 +83,7 @@ def get_artist_links(webpage, handles):
             link = card_name.find_elements(By.CLASS_NAME, 'fancy-link ')
 
             if link:
-                if (SequenceMatcher(None, handle.lower(), card_name.text.lower()).ratio()) < SIMILAR_ARTIST_NAME_RATIO:
+                if (SequenceMatcher(None, handle.lower(), card_name.text.lower()).ratio()) < KemonoConstants.SIMILAR_ARTIST_NAME_RATIO:
                     print(u"Current artist '{0}' is not close enough to '{1}' ({2:.2f}%)".format(
                         card_name.text, handle, SequenceMatcher(None, handle, card_name.text).ratio()*100))
                     continue
@@ -110,7 +109,7 @@ def download_artist(webpage, link):
     # Gets number of cards
     number_of_cards = webpage.find_element(By.CLASS_NAME, 'paginator').find_element(
         By.TAG_NAME, 'small').text.rpartition(' ')[-1]
-    if(args['confirm_download']):
+    if(_config.confirm_download):
         while True:
             proceed = input(
                 'Download files from {0} cards? [Y/N]'.format(number_of_cards)).lower()
@@ -144,7 +143,7 @@ def download_artist(webpage, link):
         scrapped_cards.append(scrape_card(webpage))
 
     try:
-        os.makedirs(args['path'])
+        os.makedirs(_config.path)
     except FileExistsError:
         pass
 
@@ -154,7 +153,7 @@ def download_artist(webpage, link):
         while True:
             c = -1
             try:
-                path = os.path.join(args['path'], (card['Card_number']+mod))
+                path = os.path.join(_config.path, (card['Card_number']+mod))
                 print(path)
                 os.mkdir(path)
                 break
