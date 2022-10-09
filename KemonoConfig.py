@@ -3,7 +3,6 @@ import os.path
 import argparse
 import configparser
 
-
 class KemonoConfig():
 
     # Defaul Values
@@ -23,18 +22,20 @@ class KemonoConfig():
     number_of_posts = -1
     otherfile_max_size = -1
 
+    arguments = {}
     titles_blacklist = []
     extensions_whitelist = []
     extensions_blacklist = []
 
     def __init__(self):
+        default_values = self.get_default_values()
+        for argument, value in default_values.items():
+            setattr(self, argument, value)
 
-        try:
-            self.parse_configfile(override=self.get_arguments())
-        except OSError:
-            raise OSError
+    def parse_arguments(self):
 
-    def get_arguments(self):
+        if self.arguments:
+            return
 
         unit = 'KBYTES_SIZE'
         argparser = argparse.ArgumentParser()
@@ -88,13 +89,13 @@ class KemonoConfig():
         argparser.add_argument('-l', '--log', action='store_true',
                                help='enables log on console')
 
-        return vars(argparser.parse_args())
+        self.arguments.update(vars(argparser.parse_args()))
 
     def get_default_values(self):
 
         default_values = {}
         for argument in KemonoConfig.__dict__.keys():
-            if argument[:2] != '__' and argument not in ('path', 'handles', 'config_file'):
+            if argument[:2] != '__' and argument not in ('path', 'handles', 'config_file', 'arguments'):
                 value = getattr(KemonoConfig, argument)
                 if not callable(value):
                     default_values.update({argument: value})
